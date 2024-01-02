@@ -16,7 +16,7 @@ A final cell spacing(at y=1) of 0.1
 
 
 Sample usage to generate a grid that has a boundary layer at y = 0 and y = 1:
-python3 pipe_grid.py 11 11 11 4.0 0.01 1.0 0.05 1.0e-3 full 
+python3 pipe_grid.py 11 11 11 4.0 1.0 0.01 1.0e-3 0.1 full 
 
 grid has:
 11 points in the x direction
@@ -25,7 +25,7 @@ grid has:
 A length of 4
 A width of 0.01(z direction)
 A height of 1
-An initial cell spacing of 3.0e-6
+An initial cell spacing of 1.0e-3
 A final cell spacing(at y=0.5*H) of 0.1 (at the centerline of pipe)
 "full" signifies that there is a boundary layer at y=H
 This grid will be symmetric about y = 0.5H
@@ -44,6 +44,7 @@ A final cell spacing of 0.05 (at the centerline of pipe)
 "3d" signifies that the output mesh will be a full cylinder mesh 
 
 
-
+To generate a Loci VOG formatted grid use the following command:
+plot3d2vog -m file     (the utility assumes the .grd suffix)
 
 
