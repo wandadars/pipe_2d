@@ -11,9 +11,7 @@ class HalfPipeGrid(object):
         self.dh_centerline = None
         self.num_i = None 
         self.num_j = None 
-        self.num_k = None 
-        
-        self.y_points = None
+        self.num_k = None
 
         self.parse_input()
 
@@ -37,11 +35,38 @@ class HalfPipeGrid(object):
         print('Usage: pipe_grid nX nY nZ L H W dhWall dhCenterline half')
 
     def compute_delta(self):
+        """
+        Computes the delta value used in the generation of the y-coordinate grid spacing.
+
+        This method iteratively calculates the delta value, which is used to determine the 
+        non-linear distribution of grid points in the y-direction. The calculation is based 
+        on a specified tolerance and continues until convergence.
+
+        Returns:
+            float: The converged delta value used for grid spacing calculations.
+            
+        Raises:
+            ValueError: If input parameters lead to an invalid computation.
+        """
         tolerance = 1.0e-10
         
+         # Validate inputs
+        if self.num_j <= 1 or self.dh_wall <= 0 or self.dh_centerline <= 0:
+            raise ValueError("Invalid input parameters. Ensure num_j > 1, dh_wall > 0, and dh_centerline > 0.")
+        
         b = 1.0 / ((self.num_j - 1) * np.sqrt(self.dh_wall * self.dh_centerline)) 
+        print(b)
+        # Check for valid square root computation
+        if b < 1:
+            print('Invalid combination of num_j, dh_wall, and dh_centerline leading to negative square root. Adjusting the spacing of the final cell to resolve the issue.')
+            self.dh_centerline = 1.0 / ((self.num_j-1)**2 * self.dh_wall) - 1.0e-1
+            print('New value for dh_centerline is: ' + str(self.dh_centerline))
+            b = 1.0 / ((self.num_j - 1) * np.sqrt(self.dh_wall * self.dh_centerline)) 
+            #raise ValueError("Invalid combination of num_j, dh_wall, and dh_centerline leading to negative square root.")
+        print(b)
         converged = False
         delta = np.sqrt(6.0 * (b - 1))  #initial guess
+        print('Initial guess for Delta: ' + str(delta))
         while converged == False:
             numerator = -(np.sinh(delta) / delta - b)
             denominator = -np.sinh(delta) / (delta**2) + np.cosh(delta) / delta
@@ -55,9 +80,18 @@ class HalfPipeGrid(object):
 
     def compute_arclength_coordinates(self):
         """
-        Compute the y distribution using Thompson's method detailed on page 306 
+        Computes the y-coordinate distribution using Thompson's method detailed on page 306 
         of his grid generation book.
+
+        This method applies Thompson's spacing method to compute the distribution of grid points 
+        along the y-axis. The method involves calculating a scaling factor 's' for each grid point 
+        based on the computed delta value and the ratio of the height at the wall to the height at 
+        the centerline.
+
+        Returns:
+            numpy.ndarray: An array of scaled values 's' for each y-coordinate grid point.
         """
+
         a = np.sqrt(self.dh_centerline / self.dh_wall)
         delta = self.compute_delta() 
         
@@ -74,46 +108,77 @@ class HalfPipeGrid(object):
         return s
 
     def compute_y_distribution(self):
+        """
+        Computes the actual y-coordinate values for the grid points.
+
+        This method uses the scaled values obtained from 'compute_arclength_coordinates' to 
+        calculate the actual y-coordinates of the grid points. The y-coordinates are interpolated 
+        between the minimum (y_min) and maximum (y_max) values of the grid.
+
+        Returns:
+            y_points: A list of computed y-coordinate values for the grid.
+        """
         arclength_points = self.compute_arclength_coordinates()
-        self.y_points = []
+        y_points = []
         for i, s in enumerate(arclength_points):
-            self.y_points.append(self.y_min + (self.y_max - self.y_min)*s)
+            y_points.append(self.y_min + (self.y_max - self.y_min)*s)
+            
+        return y_points
 
     def write_grid(self):
+        """
+        Writes the computed grid to a file.
+
+        This method outputs the precomputed grid coordinates to a file in a specified format.
+        Each line in the file corresponds to the x, y, and z coordinates of a grid point.
+        """
         coord_format = '{0:<17.10e}\n'
-        self.compute_y_distribution()
+        coordinates = self.compute_coordinates()
         f = open('./file.grd', 'w+')
         f.write('1\n')
-        f.write('{0:d} {1:d} {2:d}\n'.format(self.num_i, len(self.y_points), self.num_k))
+        f.write('{0:d} {1:d} {2:d}\n'.format(self.num_i, self.num_j, self.num_k))
         for k in range(self.num_k):
-            for j in range(len(self.y_points)):
+            for j in range(self.num_j):
                 for i in range(self.num_i):
-                    x = self.compute_x_coordinate(i, j, k)
+                    x = coordinates[i, j, k][0]
                     f.write(coord_format.format(x))
 
         for k in range(self.num_k):
-            for j in range(len(self.y_points)):
+            for j in range(self.num_j):
                 for i in range(self.num_i):
-                    y = self.compute_y_coordinate(i, j, k)
+                    y = coordinates[i, j, k][1]
                     f.write(coord_format.format(y))
         
         for k in range(self.num_k):
-            for j in range(len(self.y_points)):
+            for j in range(self.num_j):
                 for i in range(self.num_i):
-                    z = self.compute_z_coordinate(i, j, k)
+                    z = coordinates[i, j, k][2]
                     f.write(coord_format.format(z))
         f.close()
 
-    def compute_x_coordinate(self, i, j, k):
-        x = self.length * (float(i)/float(self.num_i-1))
-        return x
+    def compute_coordinates(self):
+        """
+        Computes and stores the x, y, and z coordinates for all grid points.
 
-    def compute_y_coordinate(self, i, j, k):
-        return self.y_points[j]
+        This method precomputes the grid coordinates for each point in the grid and stores them
+        in a structured format for easy access. The coordinates are stored in a 3D matrix
+        where each element is a tuple (x, y, z) representing the coordinates of a grid point.
+        """
+        # Precompute y-distribution because it uses a special spacing
+        y_distribution = self.compute_y_distribution()
 
-    def compute_z_coordinate(self, i, j, k):
-        z = self.width * (float(k)/float(self.num_k-1))
-        return z
+        # Initialize a 3D matrix to store coordinates
+        coordinates = np.empty((self.num_i, self.num_j, self.num_k), dtype=tuple)
+
+        # Compute and store coordinates
+        for i in range(self.num_i):
+            for j in range(self.num_j):
+                for k in range(self.num_k):
+                    x = self.length * (float(i) / float(self.num_i - 1))
+                    y = y_distribution[j]
+                    z = self.width * (float(k) / float(self.num_k - 1))
+                    coordinates[i, j, k] = (x, y, z)
+        return coordinates
 
 
 class FullPipeGrid(HalfPipeGrid):
