@@ -4,7 +4,7 @@ Sample usage to generate a grid that has a boundary layer at y = 0:
 python3 pipe_grid.py 9 9 2 1 1 5.0e-4 3.0e-6 0.1 half 
 
 grid has:
-7 points in the x direction
+9 points in the x direction
 9 points in the y direction(boundary layer direction)
 2 points in the z direction(single cell thick)
 A length of 1
@@ -28,22 +28,25 @@ A height of 1
 An initial cell spacing of 1.0e-3
 A final cell spacing(at y=0.5*H) of 0.1 (at the centerline of pipe)
 "full" signifies that there is a boundary layer at y=H
-This grid will be symmetric about y = 0.5H
+This grid will be symmetric about y = 0.5H and have twice as many elements in the y direction.
 
 
 Sample usage to generate a 3D cylindrical grid that has a boundary layer at the wall:
-pipe_grid.py 11 11 11 0.0 1.0 4.0 1.0e-3 0.05 3d 
+pipe_grid.py 11 11 11 0.1 1.0 4.0 1.0e-3 0.05 3d 
+
+grid has:
 11 points in the x direction
-11 points in the y direction(boundary layer direction)
+11 points in the radial direction(boundary layer direction)
 11 points in the theta direction
-Inner radius of 0.0
+Inner radius of 0.1
 Outer radius of 1.0
 A length of 4.0
 An initial cell spacing of 1.0e-3
-A final cell spacing of 0.05 (at the centerline of pipe)
+A final cell spacing of 0.05 (at the outer radius of pipe)
 "3d" signifies that the output mesh will be a full cylinder mesh 
 
-
+Note that the boundary layer can be grown from the inner cylinder or the outer cylinder by swapping the wall and centerline spacing values.
+You can even grow boundary layers off both surfaces by using small spacings for both the wall and centerline values.
 To generate a Loci VOG formatted grid use the following command:
 plot3d2vog -m file     (the utility assumes the .grd suffix)
 
