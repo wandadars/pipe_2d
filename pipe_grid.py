@@ -62,6 +62,7 @@ class HalfPipeGrid(object):
             if b < 1:
                 print('Invalid combination of num_j, dh_wall, and dh_centerline leading to negative square root. Adjusting the spacing of the final cell to resolve the issue.')
                 self.dh_centerline = 0.5 * centerline_spacing
+                centerline_spacing *= 0.5
                 print('New value for dh_centerline is: ' + str(centerline_spacing))
                 b = 1.0 / ((num_points - 1) * np.sqrt(wall_spacing * centerline_spacing))
             else:
