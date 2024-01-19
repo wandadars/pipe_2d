@@ -138,7 +138,7 @@ class HalfPipeGrid(object):
     def compute_z_distribution(self):
         z = []
         for i in range(self.num_k):
-            z.append(self.length * (float(i) / float(self.num_i - 1)))
+            z.append(self.width * (float(i) / float(self.num_k - 1)))
         return z
     
     def compute_coordinates(self):
