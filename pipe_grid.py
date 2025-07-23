@@ -28,9 +28,9 @@ class HalfPipeGrid(object):
         self.width = float(sys.argv[6])
         self.dh_wall = float(sys.argv[7])
         self.dh_centerline = float(sys.argv[8])
-        
+
         self.y_min = 0.0 #This value is hardcoded for simplicity, but can be added as an argument if needed
-      
+
     def print_usage(self):
         print('Usage: pipe_grid nX nY nZ Lx Ly Lz dhWall dhCenterline half')
 
@@ -134,13 +134,13 @@ class HalfPipeGrid(object):
         for i in range(self.num_i):
             x.append(self.length * (float(i) / float(self.num_i - 1)))
         return x
-        
+
     def compute_z_distribution(self):
         z = []
         for i in range(self.num_k):
             z.append(self.width * (float(i) / float(self.num_k - 1)))
         return z
-    
+
     def compute_coordinates(self):
         """
         Computes and stores the x, y, and z coordinates for all grid points.
@@ -153,7 +153,7 @@ class HalfPipeGrid(object):
         x_distribution = self.compute_x_distribution()
         y_distribution = self.compute_y_distribution()
         z_distribution = self.compute_z_distribution()
-        
+
         # Initialize a 3D matrix to store coordinates
         coordinates = np.empty((self.num_i, self.num_j, self.num_k), dtype=tuple)
 
@@ -206,7 +206,7 @@ class HalfPipeGrid(object):
 class FullPipeGrid(HalfPipeGrid):
     def __init__(self):
         super().__init__()
-       
+
     def print_usage(self):
         print('Usage: pipe_grid nX nY nZ Lx Ly Lz dhWall dhCenterline full')
 
@@ -222,7 +222,7 @@ class FullPipeGrid(HalfPipeGrid):
             y_points: A list of computed y-coordinate values for the full grid.
         """
         half_pipe_y_points = super().compute_y_distribution()
-        
+
         # Adjust the number of y points for full pipe
         self.num_j = 2 * (self.num_j - 1) + 1
 
@@ -267,7 +267,7 @@ class PipeGrid3D(HalfPipeGrid):
         self.length = float(sys.argv[6])
         self.dh_wall = float(sys.argv[7])
         self.dh_centerline = float(sys.argv[8])
-        
+
         print('NI (Axial): ' + str(self.num_i))
         print('NJ (Radial): ' + str(self.num_j))
         print('NK (Theta): ' + str(self.num_k))
@@ -275,7 +275,7 @@ class PipeGrid3D(HalfPipeGrid):
         print('R_outer: ' + str(self.y_max))
         print('Length: ' + str(self.length))
         print('Wall Spacing: ' + str(self.dh_wall))
-        print('Center Spacing: ' + str(self.dh_centerline))       
+        print('Center Spacing: ' + str(self.dh_centerline))
 
     def print_usage(self):
         print('Usage: pipe_grid nX nY nZ R_inner R_outer Lx dhWall dhCenterline 3d')
@@ -305,27 +305,127 @@ class PipeGrid3D(HalfPipeGrid):
                     coordinates[i, j, k] = (x, y, z)
 
         return coordinates
-        
 
-def create_grid(grid_type):
-    if grid_type == 'half':
+
+class ChannelGrid(object):
+    """Uniform, rectangular channel (Cartesian box) grid.
+
+    Command‑line interface follows the reference C++ program::
+
+        channel_grid nI nJ nK xMin xMax yMin yMax zMin zMax channel
+
+    * nI, nJ, nK – **point** counts in x, y, z
+    * xMin/xMax, yMin/yMax, zMin/zMax – physical bounds [same units]
+
+    Output format is identical to the legacy pipe grids: Leading "1" line,
+    followed by NI NJ NK, then x‑coords block, y‑coords block, z‑coords block.
+    """
+
+    def __init__(self):
+        self.parse_input()
+
+    # ──────────────────────────────────────────────────────────────────────
+    # CLI parsing
+    # ──────────────────────────────────────────────────────────────────────
+    def parse_input(self):
+        if len(sys.argv) < 11:
+            self.print_usage()
+            sys.exit(1)
+
+        self.num_i = int(sys.argv[1])  # Nx points
+        self.num_j = int(sys.argv[2])  # Ny points
+        self.num_k = int(sys.argv[3])  # Nz points
+
+        self.x_min = float(sys.argv[4])
+        self.x_max = float(sys.argv[5])
+        self.y_min = float(sys.argv[6])
+        self.y_max = float(sys.argv[7])
+        self.z_min = float(sys.argv[8])
+        self.z_max = float(sys.argv[9])
+
+        self.validate_inputs()
+
+    def print_usage(self):
+        print("Usage: channel_grid nI nJ nK xMin xMax yMin yMax zMin zMax channel")
+
+    def validate_inputs(self):
+        if self.x_max <= self.x_min or self.y_max <= self.y_min or self.z_max < self.z_min:
+            raise ValueError("Coordinate maxima must be greater than minima.")
+        for v in (self.num_i, self.num_j, self.num_k):
+            if v < 1:
+                raise ValueError("Grid point counts must be positive.")
+
+    # ──────────────────────────────────────────────────────────────────────
+    # Coordinate distributions (uniform)
+    # ──────────────────────────────────────────────────────────────────────
+    def compute_x_distribution(self):
+        return np.linspace(self.x_min, self.x_max, self.num_i)
+
+    def compute_y_distribution(self):
+        return np.linspace(self.y_min, self.y_max, self.num_j)
+
+    def compute_z_distribution(self):
+        if self.num_k == 1:
+            return np.array([self.z_min])  # single plane at z_min
+        return np.linspace(self.z_min, self.z_max, self.num_k)
+
+    # ──────────────────────────────────────────────────────────────────────
+    # Grid assembly & export
+    # ──────────────────────────────────────────────────────────────────────
+    def compute_coordinates(self):
+        x_dist = self.compute_x_distribution()
+        y_dist = self.compute_y_distribution()
+        z_dist = self.compute_z_distribution()
+
+        coords = np.empty((self.num_i, self.num_j, self.num_k, 3))
+        for i, x in enumerate(x_dist):
+            for j, y in enumerate(y_dist):
+                for k, z in enumerate(z_dist):
+                    coords[i, j, k] = (x, y, z)
+        return coords
+
+    def write_grid(self):
+        coords = self.compute_coordinates()
+        with open("file.grd", "w") as f:
+            f.write("1\n")
+            f.write(f"{self.num_i} {self.num_j} {self.num_k}\n")
+
+            # x, y, z blocks (same order as reference C++ code)
+            for k in range(self.num_k):
+                for j in range(self.num_j):
+                    for i in range(self.num_i):
+                        f.write(f"{coords[i, j, k, 0]:<17.10e}\n")
+            for k in range(self.num_k):
+                for j in range(self.num_j):
+                    for i in range(self.num_i):
+                        f.write(f"{coords[i, j, k, 1]:<17.10e}\n")
+            for k in range(self.num_k):
+                for j in range(self.num_j):
+                    for i in range(self.num_i):
+                        f.write(f"{coords[i, j, k, 2]:<17.10e}\n")
+
+def create_grid(grid_type: str):
+    grid_type = grid_type.lower()
+    if grid_type == "half":
         return HalfPipeGrid()
-    elif grid_type == 'full':
+    if grid_type == "full":
         return FullPipeGrid()
-    elif grid_type == '3d':
+    if grid_type == "3d":
         return PipeGrid3D()
-    else:
-        raise ValueError(f"Invalid grid type: {grid_type}")
+    if grid_type == "channel":
+        return ChannelGrid()
+    raise ValueError(f"Invalid grid type: {grid_type}")
 
 def main():
     if len(sys.argv) < 2:
         print("Usage: python script.py [arguments] [grid_type]")
         sys.exit(1)
-        
+
     grid_type = sys.argv[-1]
     try:
         grid = create_grid(grid_type)
         grid.write_grid()
+        print("\n✅ Grid written to file.grd")
     except ValueError as e:
         print(e)
         sys.exit(1)
