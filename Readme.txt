@@ -47,7 +47,9 @@ A final cell spacing of 0.05 (at the outer radius of pipe)
 
 Note that the boundary layer can be grown from the inner cylinder or the outer cylinder by swapping the wall and centerline spacing values.
 You can even grow boundary layers off both surfaces by using small spacings for both the wall and centerline values.
+For uniform spacing in the y/radial direction, insert the keyword "uniform" just before the grid type:
+python3 pipe_grid.py ... dhWall dhCenterline uniform half|full|3d
+In uniform mode, dhWall/dhCenterline are ignored and the spacing is linear between the min/max bounds.
 To generate a Loci VOG formatted grid use the following command:
 plot3d2vog -m file     (the utility assumes the .grd suffix)
-
 

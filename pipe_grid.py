@@ -2,6 +2,12 @@ import sys
 import numpy as np
 
 
+def _has_uniform_flag(argv):
+    if len(argv) > 2 and argv[-2].lower() == "uniform":
+        return True
+    return False
+
+
 class HalfPipeGrid(object):
     def __init__(self):
         self.length = None
@@ -12,6 +18,7 @@ class HalfPipeGrid(object):
         self.num_i = None
         self.num_j = None
         self.num_k = None
+        self.uniform_spacing = False
 
         self.parse_input()
 
@@ -28,11 +35,12 @@ class HalfPipeGrid(object):
         self.width = float(sys.argv[6])
         self.dh_wall = float(sys.argv[7])
         self.dh_centerline = float(sys.argv[8])
+        self.uniform_spacing = _has_uniform_flag(sys.argv)
 
         self.y_min = 0.0 #This value is hardcoded for simplicity, but can be added as an argument if needed
 
     def print_usage(self):
-        print('Usage: pipe_grid nX nY nZ Lx Ly Lz dhWall dhCenterline half')
+        print('Usage: pipe_grid nX nY nZ Lx Ly Lz dhWall dhCenterline [uniform] half')
 
     def compute_delta(self, wall_spacing, centerline_spacing, num_points, tolerance=1.0e-10):
         """
@@ -122,6 +130,9 @@ class HalfPipeGrid(object):
         Returns:
             y_points: A list of computed y-coordinate values for the grid.
         """
+        if self.uniform_spacing:
+            return list(np.linspace(self.y_min, self.y_max, self.num_j))
+
         arclength_points = self.compute_arclength_coordinates(self.dh_wall, self.dh_centerline, self.num_j)
         y_points = []
         for i, s in enumerate(arclength_points):
@@ -208,7 +219,7 @@ class FullPipeGrid(HalfPipeGrid):
         super().__init__()
 
     def print_usage(self):
-        print('Usage: pipe_grid nX nY nZ Lx Ly Lz dhWall dhCenterline full')
+        print('Usage: pipe_grid nX nY nZ Lx Ly Lz dhWall dhCenterline [uniform] full')
 
     def compute_y_distribution(self):
         """
@@ -267,6 +278,7 @@ class PipeGrid3D(HalfPipeGrid):
         self.length = float(sys.argv[6])
         self.dh_wall = float(sys.argv[7])
         self.dh_centerline = float(sys.argv[8])
+        self.uniform_spacing = _has_uniform_flag(sys.argv)
 
         print('NI (Axial): ' + str(self.num_i))
         print('NJ (Radial): ' + str(self.num_j))
@@ -276,9 +288,11 @@ class PipeGrid3D(HalfPipeGrid):
         print('Length: ' + str(self.length))
         print('Wall Spacing: ' + str(self.dh_wall))
         print('Center Spacing: ' + str(self.dh_centerline))
+        if self.uniform_spacing:
+            print('Radial Spacing: uniform')
 
     def print_usage(self):
-        print('Usage: pipe_grid nX nY nZ R_inner R_outer Lx dhWall dhCenterline 3d')
+        print('Usage: pipe_grid nX nY nZ R_inner R_outer Lx dhWall dhCenterline [uniform] 3d')
 
     def compute_coordinates(self):
         """
