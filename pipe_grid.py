@@ -324,15 +324,16 @@ class PipeGrid3D(HalfPipeGrid):
 class ChannelGrid(object):
     """Uniform, rectangular channel (Cartesian box) grid.
 
-    Command‑line interface follows the reference C++ program::
+    Supported command-line forms:
 
-        channel_grid nI nJ nK xMin xMax yMin yMax zMin zMax channel
+        pipe_grid.py nI nJ nK xMin xMax yMin yMax zMin zMax channel
+        channel_grid.py nI nJ nK xMin xMax yMin yMax zMin zMax
 
-    * nI, nJ, nK – **point** counts in x, y, z
-    * xMin/xMax, yMin/yMax, zMin/zMax – physical bounds [same units]
+    * nI, nJ, nK - point counts in x, y, z
+    * xMin/xMax, yMin/yMax, zMin/zMax - physical bounds [same units]
 
-    Output format is identical to the legacy pipe grids: Leading "1" line,
-    followed by NI NJ NK, then x‑coords block, y‑coords block, z‑coords block.
+    Output format is identical to the legacy pipe grids: leading "1" line,
+    followed by NI NJ NK, then x-coords block, y-coords block, z-coords block.
     """
 
     def __init__(self):
@@ -342,25 +343,33 @@ class ChannelGrid(object):
     # CLI parsing
     # ──────────────────────────────────────────────────────────────────────
     def parse_input(self):
-        if len(sys.argv) < 11:
+        args = sys.argv[1:]
+
+        if len(args) == 10:
+            if args[-1].lower() != "channel":
+                self.print_usage()
+                sys.exit(1)
+            args = args[:-1]
+        elif len(args) != 9:
             self.print_usage()
             sys.exit(1)
 
-        self.num_i = int(sys.argv[1])  # Nx points
-        self.num_j = int(sys.argv[2])  # Ny points
-        self.num_k = int(sys.argv[3])  # Nz points
+        self.num_i = int(args[0])  # Nx points
+        self.num_j = int(args[1])  # Ny points
+        self.num_k = int(args[2])  # Nz points
 
-        self.x_min = float(sys.argv[4])
-        self.x_max = float(sys.argv[5])
-        self.y_min = float(sys.argv[6])
-        self.y_max = float(sys.argv[7])
-        self.z_min = float(sys.argv[8])
-        self.z_max = float(sys.argv[9])
+        self.x_min = float(args[3])
+        self.x_max = float(args[4])
+        self.y_min = float(args[5])
+        self.y_max = float(args[6])
+        self.z_min = float(args[7])
+        self.z_max = float(args[8])
 
         self.validate_inputs()
 
     def print_usage(self):
-        print("Usage: channel_grid nI nJ nK xMin xMax yMin yMax zMin zMax channel")
+        print("Usage: channel_grid.py nI nJ nK xMin xMax yMin yMax zMin zMax")
+        print("   or: pipe_grid.py nI nJ nK xMin xMax yMin yMax zMin zMax channel")
 
     def validate_inputs(self):
         if self.x_max <= self.x_min or self.y_max <= self.y_min or self.z_max < self.z_min:
@@ -430,16 +439,31 @@ def create_grid(grid_type: str):
         return ChannelGrid()
     raise ValueError(f"Invalid grid type: {grid_type}")
 
+
+def print_general_usage():
+    print("Usage:")
+    print("  python3 pipe_grid.py nX nY nZ Lx Ly Lz dhWall dhCenterline [uniform] half")
+    print("  python3 pipe_grid.py nX nY nZ Lx Ly Lz dhWall dhCenterline [uniform] full")
+    print("  python3 pipe_grid.py nX nY nZ Rinner Router Lx dhWall dhCenterline [uniform] 3d")
+    print("  python3 pipe_grid.py nI nJ nK xMin xMax yMin yMax zMin zMax channel")
+    print("")
+    print("Legacy-style channel wrapper:")
+    print("  python3 channel_grid.py nI nJ nK xMin xMax yMin yMax zMin zMax")
+
 def main():
     if len(sys.argv) < 2:
-        print("Usage: python script.py [arguments] [grid_type]")
+        print_general_usage()
         sys.exit(1)
+
+    if sys.argv[1].lower() in ("-h", "--help", "help"):
+        print_general_usage()
+        sys.exit(0)
 
     grid_type = sys.argv[-1]
     try:
         grid = create_grid(grid_type)
         grid.write_grid()
-        print("\n✅ Grid written to file.grd")
+        print("\nGrid written to file.grd")
     except ValueError as e:
         print(e)
         sys.exit(1)

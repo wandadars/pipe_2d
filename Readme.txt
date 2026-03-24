@@ -1,5 +1,11 @@
 This utility is a python script that generates simple meshes in the Plot3D format.
 
+Supported grid types:
+- half
+- full
+- 3d
+- channel
+
 Sample usage to generate a grid that has a boundary layer at y = 0:
 python3 pipe_grid.py 9 9 2 1 1 5.0e-4 3.0e-6 0.1 half 
 
@@ -50,6 +56,23 @@ You can even grow boundary layers off both surfaces by using small spacings for 
 For uniform spacing in the y/radial direction, insert the keyword "uniform" just before the grid type:
 python3 pipe_grid.py ... dhWall dhCenterline uniform half|full|3d
 In uniform mode, dhWall/dhCenterline are ignored and the spacing is linear between the min/max bounds.
+
+Sample usage to generate a uniform Cartesian channel mesh in the legacy 1DGrid style:
+python3 channel_grid.py 81 65 2 0.0 0.2 -0.005 0.005 0.0 1.0e-4
+
+grid has:
+81 points in the x direction
+65 points in the y direction
+2 points in the z direction
+x spanning [0.0, 0.2]
+y spanning [-0.005, 0.005]
+z spanning [0.0, 1.0e-4]
+
+Equivalent explicit channel mode through pipe_grid.py:
+python3 pipe_grid.py 81 65 2 0.0 0.2 -0.005 0.005 0.0 1.0e-4 channel
+
+For a 2D channel grid that is one cell thick in z, set nK = 1 and give the plane location with zMin = zMax:
+python3 channel_grid.py 81 65 1 0.0 0.2 -0.005 0.005 0.0 0.0
+
 To generate a Loci VOG formatted grid use the following command:
 plot3d2vog -m file     (the utility assumes the .grd suffix)
-
